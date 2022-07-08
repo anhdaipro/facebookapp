@@ -28,10 +28,10 @@ SECRET_KEY = 'django-insecure-+rmd_58!jo9mvv#!fp8k@sgd=0()cqwl8_tf8vvs5q3fdtftx#
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['127.0.0.1','localhost']
+ALLOWED_HOSTS = ['127.0.0.1','localhost','facebooksweb.herokuapp.com']
 
 CORS_ALLOWED_ORIGINS = [
-    'http://localhost:3000'
+    'http://localhost:3000','facebook-123.vercel.app','http://localhost:3001'
 ]
 # Application definition
 CORS_ORIGIN_ALLOW_ALL = False
