@@ -158,7 +158,11 @@ SIMPLE_JWT = {
 
 
 # jwt
-
+CLOUDINARY_STORAGE = {
+    'CLOUD_NAME': 'ds3ngq6lv',
+    'API_KEY': '147944362918532',
+    'API_SECRET': '_9nXpFirNLd6dclMjIrj1aq3xng'
+}
 # Database
 DATABASES = {
         'default': {
@@ -174,7 +178,7 @@ DATABASES = {
 
 db_from_env = dj_database_url.config(conn_max_age=500)
 DATABASES['default'].update(db_from_env)
-
+DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.RawMediaCloudinaryStorage'
 
 # Password validation
 # https://docs.djangoproject.com/en/3.2/ref/settings/#auth-password-validators
