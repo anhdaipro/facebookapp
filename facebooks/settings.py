@@ -31,7 +31,7 @@ DEBUG = True
 ALLOWED_HOSTS = ['*']
 
 CORS_ALLOWED_ORIGINS = [
-    'http://localhost:3000','https://facebook-123.vercel.app'
+    'http://localhost:3000','https://facebook-rose.vercel.app'
 ]
 # Application definition
 CORS_ORIGIN_ALLOW_ALL = False
