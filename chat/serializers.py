@@ -11,7 +11,7 @@ class ThreadinfoSerializer(serializers.ModelSerializer):
     members=serializers.SerializerMethodField()
     class Meta:
         model=Thread
-        fields=('id','group','message_last','members','count_message',)
+        fields=('id','group','message_last','members','count_message','name',)
     def get_message_last(self,obj):
         message=Message.objects.filter(thread=obj)
         if message.exists():
@@ -26,7 +26,7 @@ class ThreadinfoSerializer(serializers.ModelSerializer):
         return Message.objects.filter(thread=obj).count()
     def get_members(self,obj):
         request=self.context.get("request") 
-        listmember=Member.objects.filter(thread=obj).exclude(user=request.user).select_related('user__profile')
+        listmember=Member.objects.filter(thread=obj).select_related('user__profile')
         return [{'id':member.id,'avatar':member.user.profile.avatar.url,'name':member.user.profile.name,'user_id':member.user_id,
         'online':member.user.profile.online,'is_online':member.user.profile.is_online} for member in listmember]
 class FileThreadSerializer(serializers.ModelSerializer):
@@ -60,12 +60,15 @@ class MediathreadSerializer(serializers.ModelSerializer):
 class MessageSerializer(serializers.ModelSerializer):
     list_file=serializers.SerializerMethodField()
     media_story=serializers.SerializerMethodField()
+    filetype=serializers.SerializerMethodField()
     class Meta:
         model=Message
-        fields=('thread','id','user_id','date_created','message','list_file','story_id','media_story',)
+        fields=('thread','id','user_id','date_created','filetype','message','list_file','story_id','media_story',)
     def get_list_file(self,obj):
         return [{'id':uploadfile.id,'file':uploadfile.file.url,
         'file_preview':uploadfile.get_file_preview(),'duration':uploadfile.duration,'filetype':uploadfile.get_filetype()}
         for uploadfile in obj.message_file.all()]
     def get_media_story(self,obj):
         return obj.get_story()
+    def get_filetype(self,obj):
+        return obj.get_message_filetype()

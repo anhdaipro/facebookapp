@@ -11,7 +11,7 @@ from .views import (
     VerifyPhoneView,
     LoginView,
     UpdateOnline,
-    Listfriend,
+    ListfriendAPI,
     FileloadAPI,
     Uploadstory,
     ListpostAPI,
@@ -37,20 +37,30 @@ from .views import (
     Getcountstory,
     FilepostAPI,
     Actionfilepost,
-    Listtag
+    Listtag,
+    Listgroupchat,
+    Listfriendsuggested,
+    ListfrienduserAPI,
+    FriendsBirthday,
+    ListFriendinvitationAPI
 )
-
+from rest_framework_simplejwt import views as jwt_views
 urlpatterns = [
     path("register", RegisterView.as_view()),
     path( "check/user", CheckuserView.as_view()),
     path( "verify/phone", VerifyPhoneView.as_view()),
+    path("refresh", jwt_views.TokenRefreshView.as_view()),
     path('send-otp/email', SendOTPemailView.as_view()),
     path("verify/email", VerifyEmailView.as_view()),
     path("send-otp/phone", SendOTPphoneView.as_view()),
-    path("user/friend/list", Listfriend.as_view()),
+    path("user/friend/list", ListfriendAPI.as_view()),
+    path("user/friends/list", ListfrienduserAPI.as_view()),
+    path("user/friends/birthdays", FriendsBirthday.as_view()),
     path( "login", LoginView.as_view()),
     path( "user/info", UserView.as_view()),
     path( "user/update/online", UpdateOnline.as_view()),
+    path( "user/friendsuggested/list", Listfriendsuggested.as_view()),
+    path( "user/invitation/list", ListFriendinvitationAPI.as_view()),
     path( "file/upload", FileloadAPI.as_view()),
     path( "story/upload", Uploadstory.as_view()),
     path( "story/user", StoryuserAPI.as_view()),
@@ -63,7 +73,7 @@ urlpatterns = [
     path( "post/list", ListpostAPI.as_view()),  
     path( "post/<int:id>", Actionpost.as_view()),  
     path( "filepost/<int:id>", Actionfilepost.as_view()), 
-    
+    path( "group/list", Listgroupchat.as_view()), 
     path( "comment/<int:id>", Actioncomemnt.as_view()),  
     path( "post/<int:id>", Actionpost.as_view()), 
     path( "post/upload", Uploadpost.as_view()), 

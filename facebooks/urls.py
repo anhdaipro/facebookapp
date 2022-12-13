@@ -25,7 +25,7 @@ urlpatterns = [
     path('admin', admin.site.urls),
     path('api-auth/', include('drf_social_oauth2.urls',namespace='drf')),
     path('api/v3/',include('api.urls')),
-   
+    path('api/v2/',include('groups.urls')),
     path('api/v1/',include('chat.urls')),
 ]
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

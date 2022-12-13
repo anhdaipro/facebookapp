@@ -8,6 +8,7 @@ class Notification(models.Model):
 	post = models.ForeignKey('post.Post', on_delete=models.CASCADE, related_name="noti_post", blank=True, null=True)
 	comment = models.ForeignKey('comment.Comment', on_delete=models.CASCADE, blank=True, null=True)
 	filepost = models.ForeignKey('post.Fileuploadpost', on_delete=models.CASCADE, blank=True, null=True)
+	group = models.ForeignKey('groups.Group', on_delete=models.CASCADE, related_name='group_user', null=True)
 	image_preview=models.FileField(upload_to='post/',null=True)
 	accept=models.BooleanField(default=False)
 	tag=models.ForeignKey(User, on_delete=models.CASCADE, blank=True, null=True)

@@ -30,50 +30,7 @@ class UploadfileMessage(APIView):
     def delete(self,request,id):
         UploadFile.objects.get(id=id).delete()
         return Response({'ok':'pj'})
-
-def message_new(request,listmessage,id):
-    msg = request.data.get('message')
-    image=request.FILES.getlist('image')
-    file=request.FILES.getlist('file')
-    file_preview=request.FILES.getlist('file_preview')
-    duration=request.POST.getlist('duration')
-    name=request.POST.getlist('name') 
-    story_id=request.POST.get('story_id') 
-    if msg:    
-        message=Message.objects.create(thread_id=id,user=request.user,message=msg,story_id=story_id)
-        listmessage.append({'id':message.id,'message':message.message,'filetype':message.get_message_filetype(),
-        'user_id':message.user_id,'date_created':message.date_created,'story_id':message.story_id,'media_story':message.get_story(),
-        'list_file':[]})
-    if image:
-        message=Message.objects.create(thread_id=id,user=request.user)
-        list_file_chat=Filechat.objects.bulk_create([Filechat(upload_by=request.user,file=image[i],message=message) for i in range(len(image))])
-        listmessage.append({'id':message.id,'message':message.message,'filetype':message.get_message_filetype(),
-                'user_id':message.user_id,'date_created':message.date_created,
-                'list_file':[{'id':uploadfile.id,'file':uploadfile.file.url,'filetype':uploadfile.get_filetype()}
-        for uploadfile in list_file_chat
-        ]})
-    if file: 
-        list_file_preview=[None for i in range(len(file))]
-        for i in range(len(list_file_preview)):
-            for j in range(len(file_preview)):
-                if i==j:
-                    list_file_preview[i]=file_preview[j]
-        count=Message.objects.last().id
-        messages=Message.objects.bulk_create([
-        Message(thread_id=id,
-            id=count+i+1,
-            user=request.user
-        ) for i in range(len(file))]) 
-                
-        Filechat.objects.bulk_create([Filechat(message_id=messages[i].id,upload_by=request.user,duration=float(duration[i]),file_preview=list_file_preview[i],file=file[i],file_name=name[i]) for i in range(len(file))])
-        listmessage=listmessage+[{'id':message.id,'message':message.message,'filetype':message.get_message_filetype(),
-        'user_id':message.user_id,'date_created':message.date_created,
-        'list_file':[{'id':uploadfile.id,'file':uploadfile.file.url,'file_name':uploadfile.filename(),
-        'file_preview':uploadfile.get_file_preview(),'duration':uploadfile.duration,'filetype':uploadfile.get_filetype()}
-        for uploadfile in message.message_file.all()
-        ]} for message in messages
-        ]
-        
+       
 class ActionThread(APIView):
     permission_classes = (IsAuthenticated,)
     def get(self,request,id):
@@ -113,7 +70,46 @@ class ActionThread(APIView):
             else:
                 Message.objects.filter(thread=thread).update(seen=True)
         elif action=='create-message':
-            message_new(request,listmessage,id)
+            msg = request.data.get('message')
+            image=request.FILES.getlist('image')
+            file=request.FILES.getlist('file')
+            file_preview=request.FILES.getlist('file_preview')
+            duration=request.POST.getlist('duration')
+            name=request.POST.getlist('name') 
+            story_id=request.POST.get('story_id') 
+            if msg:    
+                message=Message.objects.create(thread_id=id,user=request.user,message=msg,story_id=story_id)
+                listmessage.append({'id':message.id,'message':message.message,'filetype':message.get_message_filetype(),
+                'user_id':message.user_id,'date_created':message.date_created,'story_id':message.story_id,'media_story':message.get_story(),
+                'list_file':[]})
+            if image:
+                message=Message.objects.create(thread_id=id,user=request.user)
+                list_file_chat=Filechat.objects.bulk_create([Filechat(upload_by=request.user,file=image[i],message=message) for i in range(len(image))])
+                listmessage.append({'id':message.id,'message':message.message,'filetype':message.get_message_filetype(),
+                        'user_id':message.user_id,'date_created':message.date_created,
+                        'list_file':[{'id':uploadfile.id,'file':uploadfile.file.url,'filetype':uploadfile.get_filetype()}
+                for uploadfile in list_file_chat
+                ]})
+            if file: 
+                list_file_preview=[None for i in range(len(file))]
+                for i in range(len(list_file_preview)):
+                    for j in range(len(file_preview)):
+                        if i==j:
+                            list_file_preview[i]=file_preview[j]
+                count=Message.objects.last().id
+                messages=Message.objects.bulk_create([
+                Message(thread_id=id,
+                    id=count+i+1,
+                    user=request.user
+                ) for i in range(len(file))]) 
+                        
+                Filechat.objects.bulk_create([Filechat(message_id=messages[i].id,upload_by=request.user,duration=float(duration[i]),file_preview=list_file_preview[i],file=file[i],file_name=name[i]) for i in range(len(file))])
+                listmessage=[{'id':message.id,'message':message.message,'filetype':message.get_message_filetype(),
+                'user_id':message.user_id,'date_created':message.date_created,
+                'list_file':[{'id':uploadfile.id,'file':uploadfile.file.url,'file_name':uploadfile.filename(),
+                'file_preview':uploadfile.get_file_preview(),'duration':uploadfile.duration,'filetype':uploadfile.get_filetype()}
+                for uploadfile in message.message_file.all()
+                ]} for message in messages]
             return Response(listmessage)
         else:
             thread.delete()

@@ -36,7 +36,7 @@ class Fileupload(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     file= models.FileField(upload_to='post/')
     file_preview=models.ImageField(upload_to='post/',null=True)
-    duration=models.FloatField(default=0)
+    duration=models.FloatField(default=0.0)
     created = models.DateTimeField(auto_now_add=True)
     def get_file_preview(self):
         if self.file_preview and hasattr(self.file_preview,'url'):
@@ -70,6 +70,7 @@ class Post(models.Model):
     emotion= models.CharField(max_length=100,null=True)
     tags = models.ManyToManyField(User, related_name='tags_post',blank=True)
     user = models.ForeignKey(User, on_delete=models.CASCADE)
+    group=models.ForeignKey(to="groups.Group", on_delete=models.CASCADE,related_name='post_group',null=True)
     commenters =models.ManyToManyField(User, related_name='accept_commenters',blank=True)
     comment=models.CharField(max_length=100,choices=viewer_choice,default="1")
     viewer=models.CharField(max_length=100,choices=viewer_choice,default="1")

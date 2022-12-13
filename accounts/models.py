@@ -42,9 +42,12 @@ class Profile(models.Model):
 	gender=models.CharField(max_length=10,choices=GENDER_CHOICE,null=True)	
 	hide_post_user=models.ManyToManyField(User,blank=True,related_name='hide_post_user')
 	avatar = models.ImageField(upload_to="profile/", null=True,default='profile/userno_gwinne.png')
+	
 	friend_invitation=models.ManyToManyField(User,blank=True,related_name='friend_invitation')
 	followers=models.ManyToManyField(User,blank=True,related_name='followers')
+	hide_suggested=models.ManyToManyField(User,blank=True,related_name='hide_suggested')
 	likers=models.ManyToManyField(User,blank=True,related_name='likers')
+	blocked_users=models.ManyToManyField(User,blank=True,related_name='blocked_users')
 	def __str__(self):
 		return self.user.username
 	def count_friend(self):

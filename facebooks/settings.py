@@ -31,7 +31,7 @@ DEBUG = True
 ALLOWED_HOSTS = ['127.0.0.1','localhost','facebooksweb.herokuapp.com']
 
 CORS_ALLOWED_ORIGINS = [
-    'http://localhost:3000','facebook-123.vercel.app','http://localhost:3001'
+    'http://localhost:3000','https://facebook-123.vercel.app'
 ]
 # Application definition
 CORS_ORIGIN_ALLOW_ALL = False
@@ -58,6 +58,7 @@ INSTALLED_APPS = [
     'post',
     'comment',
     'chat',
+    'groups',
     'notifications',
     'livestream'
 ]
@@ -159,18 +160,18 @@ SIMPLE_JWT = {
 # jwt
 
 # Database
-
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'facebook',
-        'HOST': 'localhost',
-        'PORT': '3306',
-        'USER': 'root',
-        'PASSWORD': 'anhdai',
-        
+        'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'railway',
+        'USER': 'postgres',
+        'PASSWORD': 'kgqhStn7yH28xsXktqcG',
+        'HOST': 'containers-us-west-136.railway.app',
+        'PORT': '7447',
     }
 }
+
+
 db_from_env = dj_database_url.config(conn_max_age=500)
 DATABASES['default'].update(db_from_env)
 

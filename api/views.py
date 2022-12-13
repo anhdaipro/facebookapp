@@ -36,7 +36,8 @@ UserprofileSerializer,VerifyOTPSerializer,VerifyEmailSerializer,UserinfoSerializ
 NotificationSerializer,PostSerializer,StorySerializer,StoryemojiSerializer,
 UsernameSerializer,GetlistPostSerializer,CommentSerializer,
 ProfileinfoSerializer,SearchSerializer,UserstorySerializer,SavedSerializer,
-FilepostSerializer,PostdetailSerializer,
+UserfriendSerializer,UserBirthdaySerializer,
+FilepostSerializer,PostdetailSerializer,ThreadgroupSerializer,FriendsuggestedSerializer,
 )
 from rest_framework_simplejwt.tokens import AccessToken,RefreshToken
 from oauth2_provider.models import AccessToken, Application
@@ -79,11 +80,9 @@ class RegisterView(APIView):
         else:
             return Response({'error':True})
 
-
 class UpdateOnline(APIView):
     permission_classes = (IsAuthenticated,)
-    def post(self,request):
-        online=request.POST.get('online')
+    def post(self,request):dataPOST.get('online')
         if online=='false':
             Profile.objects.filter(user=request.user).update(online=False,is_online=timezone.now())
         return Response({'pk':'ki'})
@@ -104,8 +103,8 @@ class UserView(APIView):
 
 class CheckuserView(APIView):
     def post(self,request):
-        username=request.POST.get('username')
-        email=request.POST.get('email')
+        username=request.data.get('username')
+        email=request.data.get('email')
         check_user=User.objects.filter(Q(username=username) | Q(email=email))
         if check_user.exists():
             return Response({'error':True})
@@ -121,8 +120,8 @@ class CheckuserView(APIView):
 
 class SendOTPemailView(APIView):
     def post(self,request):
-        email=request.POST.get('email')
-        reset=request.POST.get('reset')
+        email=request.data.get('email')
+        reset=request.data.get('reset')
         user=User.objects.filter(email=email)
         if user.exists():
             usr_otp = random.randint(100000, 999999)
@@ -144,7 +143,7 @@ class VerifyEmailView(APIView):
         if serializer.is_valid():
             email=serializer.validated_data['email']
             code=serializer.validated_data['code']
-            reset=request.POST.get('reset')
+            reset=request.data.get('reset')
             verifyemail=Verifyemail.objects.filter(email=email).last()
             current_time=timezone.now()
             time_experi=current_time-verifyemail.created
@@ -165,9 +164,9 @@ class VerifyEmailView(APIView):
 class SendOTPphoneView(APIView):
     permission_classes = (AllowAny,)
     def post(self, request, *args, **kwargs):
-        phone=request.POST.get('phone')
-        login=request.POST.get('login')
-        reset=request.POST.get('reset')
+        phone=request.data.get('phone')
+        login=request.data.get('login')
+        reset=request.data.get('reset')
         usr_otp = random.randint(100000, 999999)
         otp=SMSVerification.objects.create(code=usr_otp,phone=phone)
         if login: 
@@ -198,7 +197,7 @@ class VerifyPhoneView(APIView):
         if serializer.is_valid():
             phone=serializer.validated_data['phone']
             code=serializer.validated_data['code']
-            reset=request.POST.get('reset')
+            reset=request.data.get('reset')
             verifysms=SMSVerification.objects.filter(phone=phone).last()
             profile=Profile.objects.filter(phone=phone)
             current_time=timezone.now()
@@ -221,32 +220,31 @@ class VerifyPhoneView(APIView):
         else:
             return Response({'error':True})
 
+
 class LoginView(APIView):
     permission_classes = (AllowAny,)
-    def post(self, request,*args, **kwargs):
-        username = request.POST.get('username')
-        password = request.POST.get('password')
-        email = request.POST.get('email')
-        token=request.POST.get('token')
-        user_id=request.POST.get('user_id')
+    def post(self, request,):
+        username = request.data.get('username')
+        password = request.data.get('password')
+        email = request.data.get('email')
+        token=request.data.get('token')
+        user_id=request.data.get('user_id')
         if token:
             token = AccessToken.objects.get(token=token)
             user = token.user
-            refresh = RefreshToken.for_user(user)
         elif user_id:
             user=User.objects.get(id=user_id)
-            refresh = RefreshToken.for_user(user)
         else:
-            if username:
-                user = authenticate(request, username=username, password=password)
             if email:
-                user = authenticate(request, email=username, password=password)  
+                user = authenticate(request, email=username, password=password)
+            else:
+                user = authenticate(request, username=username, password=password)
         try:
             refresh = RefreshToken.for_user(user)
             data = {
                 'refresh': str(refresh),
                 'access': str(refresh.access_token),
-                'access_expires': datetime.datetime.now()+settings.SIMPLE_JWT['ACCESS_TOKEN_LIFETIME']
+                'access_expires': timezone.now()+settings.SIMPLE_JWT['ACCESS_TOKEN_LIFETIME']
             }
             return Response(data)
         except Exception:
@@ -261,6 +259,7 @@ class Listtag(APIView):
             listuser=listuser.filter(profile__name__startswith=keyword)
         serializer = UserinfoSerializer(listuser[:10],many=True, context={"request": request})
         return Response(serializer.data)
+
 class FileloadAPI(APIView):
     def post(self,request):
         file=request.FILES.get('file')
@@ -285,6 +284,7 @@ class FileloadAPI(APIView):
             video=Fileupload.objects.create(user=request.user,file=file,file_preview=file_preview,duration=int(duration))
             data.update({'id':video.id,'file':video.file.url,'file_preview':video.get_file_preview(),'duration':video.duration})
         return Response(data)
+
 class Uploadstory(APIView):
     def post(self,request):
         file=request.FILES.get('file')
@@ -329,6 +329,26 @@ class FilepostAPI(APIView):
             file.note=note
         file.save()
         return Response({'ok':'ok'})
+
+class ListfrienduserAPI(APIView):
+    def get(self,request):
+        keyword=request.GET.get('keyword')
+        offset=request.GET.get('offset')
+        profile=Profile.objects.get(user=request.user)
+        listfriend=Friend.objects.filter(profile=profile)
+        listuser=User.objects.filter(friend_user__in=listfriend).select_related('profile')
+        if keyword:
+            listuser=listuser.filter(profile__name__startswith=keyword)
+        count=listuser.count()
+        from_item=0
+        if offset:
+            from_item=int(offset)
+        to_item=from_item+10
+        if from_item+10>=count:
+            to_item=count
+        serializer = UserfriendSerializer(listuser[from_item:to_item],many=True, context={"request": request})
+        return Response({'listfriend':serializer.data,'count':count})
+
 class Uploadpost(APIView):
     def post(self,request):
         image=request.FILES.getlist('image')
@@ -344,9 +364,10 @@ class Uploadpost(APIView):
         noteimage=request.POST.getlist('noteimage')
         notevideo=request.POST.getlist('notevideo')
         emotion=request.POST.get('emotion')
+        group_id=request.POST.get('group_id')
         profile=Profile.objects.get(user=request.user)
         listfriend=Friend.objects.filter(profile=profile)
-        post,created = Post.objects.get_or_create(user=request.user,viewer=viewer,caption=caption,emotion=emotion)
+        post,created = Post.objects.get_or_create(user=request.user,viewer=viewer,caption=caption,emotion=emotion,group_id=group_id)
         if viewer=='3' or viewer=='6':
             post.exception_viewer.set(except_id)
         if viewer=='5' or viewer=='6':
@@ -405,6 +426,7 @@ class SearchAPIView(APIView):
         else:
             Searchcurrent.objects.get_or_create(user=request.user,keyword=keyword,user_search_id=user_id)
         return Response({'ok':'ok'})
+
 class TopsearchAPIView(APIView):
     permission_classes = (IsAuthenticated,)
     serializer_class=SearchSerializer
@@ -415,7 +437,16 @@ class TopsearchAPIView(APIView):
             listsearch=listsearch.filter(keyword__startswith=keyword)
         serializer = SearchSerializer(listsearch,many=True, context={"request": request})
         return Response(serializer.data)
-class Listfriend(ListAPIView):
+
+class Listgroupchat(APIView):
+    permission_classes = (IsAuthenticated,)
+    serializer_class=ThreadgroupSerializer
+    def get(self,request):
+        listgroup=Thread.objects.filter(participant=request.user,group=True)
+        serializer = ThreadgroupSerializer(listgroup,many=True, context={"request": request})
+        return Response(serializer.data)
+
+class ListfriendAPI(ListAPIView):
     permission_classes = (IsAuthenticated,)
     serializer_class=UserprofileSerializer
     def get(self,request):
@@ -449,7 +480,6 @@ class ListpostAPI(ListAPIView):
         listpost=listpost[item_from:to_item]
         serializer = PostSerializer(listpost,many=True, context={"request": request})
         return Response(serializer.data)
-
 
 class Storyfriend(ListAPIView):
     permission_classes = (IsAuthenticated,)
@@ -571,7 +601,7 @@ class Actionpost(APIView):
                 if notification.exists():
                     pass
                 else:
-                    if post.user not in post.turn_off_notifications.all():
+                    if post.user not in post.turn_off_notifications.all() and post.user!=request.user:
                         notification=Notification.objects.create(receiver_id=post.user_id,post_id=id,notification_type=1,user=request.user,text_preview=emoji) 
                         listnotifications.append({'id':notification.id,'notification_type':1,'receiver_id':post.user_id,'user_id':request.user.id,'avatar':request.user.profile.avatar.url,'name':request.user.profile.name,'gender':user.profile.gender})
                         Profile.objects.filter(user=post.user).update(count_notify_unseen=F('count_notify_unseen')+1)
@@ -784,6 +814,19 @@ class ListEmojStory(ListAPIView):
         serializer = StoryemojiSerializer(story_emotions,many=True, context={"request": request})
         return Response(serializer.data)
 
+class Listfriendsuggested(ListAPIView):
+    def get(self,request):
+        profile=Profile.objects.get(user=request.user)
+        listuser=[]
+        listfriend=Friend.objects.filter(profile=profile)
+        for friend in listfriend:
+            listsuggested=friend.user.profile
+            listuser.append(listsuggested)
+        listfriendsuggested=Friend.objects.filter(profile__in=listuser)
+        listfriendsuggesteds=Profile.objects.filter(user__friend_user__in=listfriendsuggested).exclude(user=request.user).exclude(user__friend_user__in=listfriend).distinct()
+        serializer = FriendsuggestedSerializer(listfriendsuggesteds,many=True, context={"request": request})
+        return Response(serializer.data)
+
 class ListcommentAPI(ListAPIView):
     permission_classes = (IsAuthenticated,)
     serializers_class=CommentSerializer
@@ -791,6 +834,7 @@ class ListcommentAPI(ListAPIView):
         listcomment=Comment.objects.filter(post_id=post_id).select_related('user__profile').select_related('uploadfile').prefetch_related('tags')
         serializer = CommentSerializer(listcomment,many=True, context={"request": request})
         return Response(serializer.data)
+
 class ListcommentfilepostAPI(ListAPIView):
     permission_classes = (IsAuthenticated,)
     serializers_class=CommentSerializer
@@ -798,6 +842,14 @@ class ListcommentfilepostAPI(ListAPIView):
         listcomment=Comment.objects.filter(filepost_id=filepost_id).select_related('user__profile').select_related('uploadfile').prefetch_related('tags')
         serializer = CommentSerializer(listcomment,many=True, context={"request": request})
         return Response(serializer.data)       
+
+class FriendsBirthday(APIView):
+    def get(self,request):
+        profile=Profile.objects.get(user=request.user)
+        listfriend=Friend.objects.filter(profile=profile)
+        listuser=User.objects.filter(friend_user__in=listfriend).select_related('profile').order_by('profile__date_of_birth')
+        serializer = UserBirthdaySerializer(listuser,many=True,context={"request": request})
+        return Response(serializer.data)  
 class Liststoryfriend(APIView):
     def get(self,request):
         profile=Profile.objects.get(user=request.user)
@@ -811,6 +863,7 @@ class Liststoryfriend(APIView):
                 list_story.append({'user_id':user.id,'caption':story.caption,
                 'id':story.id,'avatar':user.profile.avatar.url,'name':user.profile.name,'file':story.get_file()}) 
         return Response(list_story)  
+
 class Liststory(ListAPIView):
     permission_classes = (IsAuthenticated,)
     serializers_class=StorySerializer
@@ -829,13 +882,24 @@ class Actionfriend(APIView):
         friend_type=request.data.get('friend_type')
         friend=Profile.objects.get(user_id=receiver_id)
         profile=Profile.objects.get(user=request.user)
+        frienduser=User.objects.get(id=receiver_id)
         data={}
-        if action=='unfollow':
-            profile.followers.remove(receiver_id)
-            data.update({'action':{'follow':False}})
+        if action=='hide_suggested':
+            profile.hide_suggested.add(receiver_id)
         elif action=='follow':
-            profile.followers.add(receiver_id)
-            data.update({'action':{'follow':True}})
+            if frienduser in profile.followers.all():
+                profile.followers.remove(receiver_id)
+                data.update({'action':{'follow':False}})
+            else:
+                profile.followers.add(receiver_id)
+                data.update({'action':{'follow':True}})
+        elif action=='block':
+            if frienduser in profile.blocked_users.all():
+                profile.blocked_users.remove(receiver_id)
+                data.update({'action':{'blocked':False}})
+            else:
+                profile.blocked_users.add(receiver_id)
+                data.update({'action':{'blocked':True}})
         elif action=='unfriend':
             Friend.objects.filter((Q(user=request.user) & Q(profile=friend)) |(Q(user_id=receiver_id) & Q(profile=profile))).delete()
             Notification.objects.filter((Q(user=request.user) & Q(receiver=friend.user) & (Q(notification_type=5) | Q(notification_type=7)) ) |(Q(user_id=receiver_id) & (Q(notification_type=5) | Q(notification_type=7)) & Q(receiver=request.user))).delete()
@@ -854,7 +918,7 @@ class Actionfriend(APIView):
             friend.save()
             data.update({'action':{'friend':True,'friend_invitation':False},'listnotifications':[{'id':notification.id,'receiver_id':receiver_id,'notification_type':7,'user_id':request.user.id,'avatar':request.user.profile.avatar.url,'name':request.user.profile.name}]})
         elif action=='favorite':
-            if receiver_id in profile.likers.all():
+            if frienduser in profile.likers.all():
                 profile.likers.remove(receiver_id)
                 data.update({'action':{'like':False}})
             else:
@@ -862,6 +926,7 @@ class Actionfriend(APIView):
                 data.update({'action':{'like':True}})
         elif action=='friend_invitation':
             if request.user in friend.friend_invitation.all():
+                profile.followers.remove(receiver_id)
                 friend.friend_invitation.remove(request.user)
                 data.update({'action':{'friend_invitation':False}})    
                 Notification.objects.filter(notification_type=5,user=request.user,receiver_id=receiver_id).delete()
@@ -869,6 +934,7 @@ class Actionfriend(APIView):
                 friend.save()
             else:
                 friend.friend_invitation.add(request.user)
+                profile.followers.add(receiver_id)
                 notification=Notification.objects.create(receiver_id=receiver_id,notification_type=5,user=request.user)
                 friend.count_notify_unseen+=1
                 friend.save()
@@ -897,7 +963,15 @@ class Actionfriend(APIView):
                     friend.unnamed_list =True
             friend.save()
         return Response(data)
-           
+
+class ListFriendinvitationAPI(APIView):
+    def get(self,request):
+        profile=Profile.objects.get(user=request.user)
+        listuser=profile.friend_invitation.all()
+        listFriendinvitation=Profile.objects.filter(user__in=listuser)
+        serializer =FriendsuggestedSerializer(listFriendinvitation,many=True,context={"request": request})
+        return Response(serializer.data)
+
 class Profileinfo(APIView):
     permission_classes = (IsAuthenticated,)
     serializers_class=ProfileinfoSerializer
@@ -922,11 +996,13 @@ class Profileinfo(APIView):
         profile.save()
         data={'story':profile.story,'cover_image':profile.get_cover_image(),'avatar':profile.avatar.url}
         return Response(data)
+
 class GetcountNotifi(APIView):
     def get(self,request):
         user=request.user
         count=Notification.objects.filter(receiver=user).prefetch_related('receiver').select_related('user').count()
         return Response({'count':count})
+
 class GetcountPost(APIView):
     def get(self,request):
         profile=Profile.objects.get(user=request.user)
@@ -936,6 +1012,7 @@ class GetcountPost(APIView):
         listpostfriend=Post.objects.filter((Q(user__in=listuser) & (Q(viewer='2') | Q(viewer='3') | Q(viewer='1') ))|((Q(viewer='5') | Q(viewer='6')| Q(viewer='7')|Q(viewer='8')|Q(viewer='9')) & Q(accept_viewer=request.user))).exclude(Q(exception_viewer=request.user)).exclude(viewer='4').exclude(hide_post=request.user).select_related('user__profile').prefetch_related('file_post')
         count=listpostuser.count()+listpostfriend.count()
         return Response({'count':count})
+
 class Getcountstory(APIView):
     def get(self,request):
         profile=Profile.objects.get(user=request.user)
@@ -945,6 +1022,7 @@ class Getcountstory(APIView):
         liststoryfriend=Story.objects.filter(user__in=listuser,created__gte=yesterday).exclude(user__in=profile.hide_story_user.all()).select_related('user').prefetch_related('fileupload')
         count=liststoryuser.count()+liststoryfriend.count()
         return Response({'count':count})
+
 class ListNotifyAPI(APIView):
     permission_classes = (IsAuthenticated,)
     serializers_class=NotificationSerializer
@@ -965,6 +1043,7 @@ class ListNotifyAPI(APIView):
         listnotify=listnotify[item_from:to_item]
         serializer = NotificationSerializer(listnotify,many=True, context={"request": request})
         return Response(serializer.data)
+
 class ActionNotification(APIView):
     permission_classes = (IsAuthenticated,)
     def post(self,request,id):
@@ -974,6 +1053,7 @@ class ActionNotification(APIView):
     def delete(self,request,id):
         Notification.objects.get(id=id).delete()
         return Response({'ok':'ok'})
+
 class Actioncomemnt(APIView):
     permission_classes = (IsAuthenticated,)
     serializer_class=UserprofileSerializer
@@ -1042,6 +1122,7 @@ class StoryuserAPI(ListAPIView):
         liststory=Story.objects.filter(user=request.user,created__gte=yesterday).select_related('user').prefetch_related('fileupload')
         serializer = StorySerializer(liststory,many=True, context={"request": request})
         return Response(serializer.data)
+
 class PasswordResetView(APIView):
     def post(self, request, *args, **kwargs):
         email=request.data.get('email',None)

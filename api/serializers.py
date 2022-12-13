@@ -66,19 +66,22 @@ class VerifyOTPSerializer(serializers.ModelSerializer):
         model = SMSVerification
         fields=('id', 'phone', 'code',)
         extra_kwargs = {'code': {'write_only': True}}
-
-class UserinfoSerializer(serializers.ModelSerializer):
+class UserhomeSerializer(serializers.ModelSerializer):
     avatar=serializers.SerializerMethodField()
     name=serializers.SerializerMethodField()
-    count_notify_unseen=serializers.SerializerMethodField()
-    count_message_unseen=serializers.SerializerMethodField()
     class Meta:
         model=User
-        fields = ('username','id','avatar','name','count_notify_unseen','count_message_unseen',)
+        fields=['username','id','avatar','name']
     def get_avatar(self,obj):
         return obj.profile.avatar.url
     def get_name(self,obj):
         return obj.profile.name
+
+class UserinfoSerializer(UserhomeSerializer):
+    count_notify_unseen=serializers.SerializerMethodField()
+    count_message_unseen=serializers.SerializerMethodField()
+    class Meta(UserhomeSerializer.Meta):
+        fields =UserhomeSerializer.Meta.fields+['count_notify_unseen','count_message_unseen']
     def get_count_notify_unseen(self,obj):
         return obj.profile.count_notify_unseen
     def get_count_message_unseen(self,obj):
@@ -93,35 +96,64 @@ class FriendSerializer(serializers.ModelSerializer):
         fields=('id','username','id','avatar','name','isonline',)
     def get_user(self,obj):
         return {'username':obj.user.username,'avatar':obj.user.profile.avatar.url,'id':obj.user_id,'name':obj.user.profile.name}
-class UserprofileSerializer(serializers.ModelSerializer):
-    avatar=serializers.SerializerMethodField()
+
+class UserprofileSerializer(UserhomeSerializer):
     online=serializers.SerializerMethodField()
-    name=serializers.SerializerMethodField()
     is_online=serializers.SerializerMethodField()
-    class Meta:
-        model=User
-        fields=('id','username','online','is_online','avatar','name',)
-    def get_avatar(self,obj):
-        return obj.profile.avatar.url
-    def get_name(self,obj):
-        return obj.profile.name
+    class Meta(UserhomeSerializer.Meta):
+        fields=UserhomeSerializer.Meta.fields+['online','is_online']
     def get_online(self,obj):
         return obj.profile.online
     def get_is_online(self,obj):
         return obj.profile.is_online
-class UserstorySerializer(serializers.ModelSerializer): 
-    avatar=serializers.SerializerMethodField()
+
+class UserBirthdaySerializer(UserhomeSerializer):
+    date_of_birth=serializers.SerializerMethodField()
+    class Meta(UserhomeSerializer.Meta):
+        fields =UserhomeSerializer.Meta.fields+['date_of_birth']
+    def get_date_of_birth(self,obj):
+        return obj.profile.date_of_birth
+class UserfriendSerializer(UserhomeSerializer): 
+    follow=serializers.SerializerMethodField()
+    blocked=serializers.SerializerMethodField()
+    friend=serializers.SerializerMethodField()
+    friend_invitation=serializers.SerializerMethodField()
+    class Meta(UserhomeSerializer.Meta):
+        fields=UserhomeSerializer.Meta.fields+['follow','blocked','friend','friend_invitation']
+    def get_follow(self,obj):
+        request=self.context.get("request")
+        follow=False
+        profile=Profile.objects.get(user=request.user)
+        if obj in profile.followers.all():
+            follow= True
+        return follow
+    def get_friend_invitation(self,obj):
+        invitation=False
+        request=self.context.get("request") 
+        profile=Profile.objects.get(user=request.user)
+        if request.user in profile.friend_invitation.all():
+            invitation=True
+        return invitation
+    def get_friend(self,obj):
+        request=self.context.get("request")
+        friend=False
+        profile=Profile.objects.get(user=request.user)
+        if Friend.objects.filter(user=obj,profile=profile).exists():
+            friend=True
+        return friend
+    def get_blocked(self,obj):
+        request=self.context.get("request")
+        blocked=False
+        profile=Profile.objects.get(user=request.user)
+        if obj in profile.blocked_users.all():
+            blocked= True
+        return blocked
+class UserstorySerializer(UserhomeSerializer): 
     online=serializers.SerializerMethodField()
-    name=serializers.SerializerMethodField()
     is_online=serializers.SerializerMethodField()
     count_new_story=serializers.SerializerMethodField()
-    class Meta:
-        model=User
-        fields=('id','username','online','is_online','avatar','name','count_new_story',)
-    def get_avatar(self,obj):
-        return obj.profile.avatar.url
-    def get_name(self,obj):
-        return obj.profile.name
+    class Meta(UserhomeSerializer.Meta):
+        fields=UserhomeSerializer.Meta.fields+['online','is_online','count_new_story']
     def get_online(self,obj):
         return obj.profile.online
     def get_is_online(self,obj):
@@ -134,28 +166,20 @@ class UserstorySerializer(serializers.ModelSerializer):
             view_count=Story_emotions.objects.filter(user=request.user,story__in=liststory).count()
             count=liststory.count()-view_count
         return count
-class ProfileinfoSerializer(serializers.ModelSerializer): 
-    avatar=serializers.SerializerMethodField()
-    cover_image=serializers.SerializerMethodField()
-    count_friend=serializers.SerializerMethodField()
-    list_friend=serializers.SerializerMethodField()
-    count_friend=serializers.SerializerMethodField()
+class FriendsuggestedSerializer(serializers.ModelSerializer): 
     mutual_friends=serializers.SerializerMethodField()
+    avatar=serializers.SerializerMethodField()
+    username=serializers.SerializerMethodField()
     friend=serializers.SerializerMethodField()
     friend_invitation=serializers.SerializerMethodField()
     follow=serializers.SerializerMethodField()
     class Meta:
         model=Profile
-        fields=('user','online','friend_invitation','follow','friend','is_online','cover_image','mutual_friends','list_friend','avatar','name','count_friend','story',)
+        fields=['id','username','user_id','name','avatar','mutual_friends','avatar','friend_invitation','follow','friend']
     def get_avatar(self,obj):
         return obj.avatar.url
-    def get_cover_image(self,obj):
-        return obj.get_cover_image()
-    def get_count_friend(self,obj):
-        return obj.count_friend()
-    def get_list_friend(self,obj):
-        listfriend=Friend.objects.filter(profile=obj)
-        return([friend.user.profile.avatar.url for friend in listfriend[:4]])
+    def get_username(self,obj):
+        return obj.user.username
     def get_friend(self,obj):
         friend=False
         request=self.context.get("request") 
@@ -172,17 +196,32 @@ class ProfileinfoSerializer(serializers.ModelSerializer):
     def get_friend_invitation(self,obj):
         invitation=False
         request=self.context.get("request") 
-        friend=Profile.objects.get(user=request.user)
-        if obj.user in friend.friend_invitation.all():
+        
+        if request.user in obj.friend_invitation.all():
             invitation=True
         return invitation
     def get_mutual_friends(self,obj):
-        request=self.context.get("request") 
-        
+        request=self.context.get("request")  
         listfriend1=Friend.objects.filter(profile=obj)
         listfriend2=Friend.objects.filter(profile=request.user.profile)
         listfriend=User.objects.filter(friend_user__in=listfriend1).filter(friend_user__in=listfriend2)
         return {'count':listfriend.count(),'listfriend':[friend.profile.avatar.url for friend in listfriend[:4]]}
+class ProfileinfoSerializer(FriendsuggestedSerializer): 
+    cover_image=serializers.SerializerMethodField()
+    count_friend=serializers.SerializerMethodField()
+    list_friend=serializers.SerializerMethodField()
+    count_friend=serializers.SerializerMethodField()
+    
+    class Meta(FriendsuggestedSerializer.Meta):
+        fields=FriendsuggestedSerializer.Meta.fields+['online','is_online','cover_image','list_friend','count_friend','story']
+    def get_cover_image(self,obj):
+        return obj.get_cover_image()
+    def get_count_friend(self,obj):
+        return obj.count_friend()
+    def get_list_friend(self,obj):
+        listfriend=Friend.objects.filter(profile=obj)
+        return([friend.user.profile.avatar.url for friend in listfriend[:4]])
+    
 class SearchSerializer(serializers.ModelSerializer):
     user = serializers.SerializerMethodField()
     class Meta:
@@ -300,8 +339,7 @@ class NotificationSerializer(serializers.ModelSerializer):
 
 
 class FilepostSerializer(serializers.ModelSerializer):
-    file_preview=serializers.SerializerMethodField()
-    file=serializers.SerializerMethodField()
+    
     list_file=serializers.SerializerMethodField()
     viewer=serializers.SerializerMethodField()
     user=serializers.SerializerMethodField()
@@ -316,12 +354,10 @@ class FilepostSerializer(serializers.ModelSerializer):
         fields=('id','file_preview','user','viewer','file','express_emotions',
         'count_express_emotions','reported','commented','list_emoji',
         'count_comment','duration','tags','note','list_file','post',)
-    def get_file_preview(self,obj):
-        return obj.get_file_preview()
+    
     def get_user(self,obj):
         return {'avatar':obj.user.profile.avatar.url,'id':obj.user_id,'name':obj.user.profile.name,'online':obj.user.profile.online,'is_online':obj.user.profile.is_online}
-    def get_file(self,obj):
-        return obj.file.url
+    
     def get_viewer(self,obj):
         return obj.post.viewer
     def get_list_file(self,obj):
@@ -393,6 +429,20 @@ class GetlistPostSerializer(serializers.ModelSerializer):
     def get_list_except(self,obj):
         return [{'username':user.username,'avatar':user.profile.avatar.url,'id':user.id,'name':user.profile.name} for user in obj.exception_viewer.all().select_related('profile')]
 
+class ThreadgroupSerializer(serializers.ModelSerializer):
+    count_message=serializers.SerializerMethodField()
+    members=serializers.SerializerMethodField()
+    class Meta:
+        model= Thread
+        fields=('id','group_name','group','members','count_message',)
+    def get_count_message(self,obj):
+        return Message.objects.filter(thread=obj).count()
+    def get_members(self,obj):
+        request=self.context.get("request") 
+        listmember=Member.objects.filter(thread=obj).select_related('user__profile')
+        return [{'id':member.id,'avatar':member.user.profile.avatar.url,'name':member.user.profile.name,'user_id':member.user_id,
+        'online':member.user.profile.online,'is_online':member.user.profile.is_online} for member in listmember]
+
 class PostSerializer(serializers.ModelSerializer):
     fileupload=serializers.SerializerMethodField()
     tags=serializers.SerializerMethodField()
@@ -422,8 +472,7 @@ class PostSerializer(serializers.ModelSerializer):
             return express_emotions.values('emotion').distinct()
     def get_list_emotioner(self,obj):
         express_emotions=Post_emotions.objects.filter(post=obj)
-        if express_emotions.exists():
-            return [item.user.profile.name for item in express_emotions[:10]]
+        return [item.user.profile.name for item in express_emotions[:10]]
     def get_fileupload(self,obj):
         fileupload=Fileuploadpost.objects.filter(post=obj)
         return [{'id':file.id,'file':file.file.url,'file_preview':file.get_file_preview()} for file in fileupload[:4] ]
