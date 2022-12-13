@@ -97,7 +97,7 @@ const Chatbody=(props)=>{
 
     
     useEffect(() => {
-        socket.current=io.connect('https://server-socket-123.herokuapp.com')
+        socket.current=io.connect('https://web-production-e133.up.railway.app')
         socket.current.on('message',data=>{
             console.log(data)
             if(data.typing || data.typing==""){
@@ -367,7 +367,7 @@ const Chatbody=(props)=>{
                         }} key={mention.id} data-e2e="comment-at-list" className="tiktok-d4c6zy-DivItemBackground ewopnkv6">
                             <div className="tiktok-1rn2hi8-DivItemContainer ewopnkv5 item-space">
                                 <span shape="circle" className="tiktok-tuohvl-SpanAvatarContainer e1e9er4e0" style={{flex: '0 0 40px', width: '40px', height: '40px'}}>
-                                    <img loading="lazy" src={originurl+mention.avatar} className="tiktok-1zpj2q-ImgAvatar e1e9er4e1"/>
+                                    <img loading="lazy" src={mention.avatar} className="tiktok-1zpj2q-ImgAvatar e1e9er4e1"/>
                                 </span>
                                 <div className="tiktok-4f7266-DivInfoContainer ewopnkv7">
                                     <p className="tiktok-15s5y80-PMentionInfoLine ewopnkv8">
