@@ -1050,10 +1050,10 @@ class ActionNotification(APIView):
     def post(self,request,id):
         notification_type=request.data.get('notification_type')
         sender_id=request.data.get('id')
-        return Response({'ok':'ok'})
+        return Response({'success':True})
     def delete(self,request,id):
         Notification.objects.get(id=id).delete()
-        return Response({'ok':'ok'})
+        return Response({'success':True})
 
 class Actioncomemnt(APIView):
     permission_classes = (IsAuthenticated,)
